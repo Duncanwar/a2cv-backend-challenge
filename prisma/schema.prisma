@@ -16,7 +16,7 @@ datasource db {
 
 model User{
   id        String    @id @default(uuid())
-  username  String
+  username  String    @unique
   email     String    @unique
   password  String
   products  Product[]
@@ -29,7 +29,7 @@ model Product{
   id          String     @id @default(uuid())
   name        String
   description String?
-  price       Decimal    @db.Decimal(10,2)
+  price       Int      @default(10)
   stock       Int
   category    String?
   userId      String
@@ -44,7 +44,7 @@ model Order{
   userId     String
   user       User       @relation(fields: [userId], references: [id])
   description String?
-  totalPrice Decimal    @db.Decimal(10,2)
+  totalPrice Int      @default(10)
   status     String
   items      ProductOrder[]
   createdAt  DateTime   @default(now())
@@ -57,6 +57,6 @@ model ProductOrder{
   order     Order    @relation(fields: [orderId], references: [id])
   productId String
   product   Product  @relation(fields: [productId], references: [id])
-  quantity  Int      @default(1)
-  price     Decimal  @db.Decimal(10,2)
+  quantity  Int      @default(10)
+  price     Int      @default(10)
 }

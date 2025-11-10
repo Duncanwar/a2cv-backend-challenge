@@ -26,7 +26,7 @@ export default class ErrorHandler {
    * @returns {ExpressResponse} - Error message
    */
   static notFound(req: Request, res: ExpressResponse): ExpressResponse {
-    return Response.send(res, 404, 'Sorry, That route is not here!')
+    return Response.send(res, 404, false, 'Sorry, That route is not here!')
   }
 
   /** Handle Uncaught exceptions
@@ -58,6 +58,7 @@ export default class ErrorHandler {
     return Response.send(
       res,
       err.statusCode || err.status || 500,
+      false,
       err.message || 'Something Failed, Please try again'
     )
   }
