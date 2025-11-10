@@ -6,6 +6,7 @@ import JWTService from "../../services/jwt";
 import Response from "../../services/response";
 import { BadRequestException, NotFoundException } from "../../utils/exception";
 import { LoginDTO, AuthSingUpDTO } from "./dto";
+import { UnauthorizedException } from '../../utils/exception'
 
 export default class AuthController {
   static async signUp(
@@ -59,6 +60,19 @@ export default class AuthController {
     next: NextFunction
   ): Promise<ExpressResponse | void> {
     try {
+      // Validate request
+      const errors = validationResult(req)
+      if (!errors.isEmpty()) {
+        return Response.send(
+          res,
+          400,
+          false,
+          'Validation failed',
+          null,
+          errors.array().map(e => e.msg)
+        )
+      }
+
       const dto: LoginDTO = req.body;
       const user = await prisma.user.findFirst({
         where: {
@@ -66,30 +80,31 @@ export default class AuthController {
         },
       });
       if (!user) {
-        throw new NotFoundException("User not found");
-      } else {
-        const passwordMatch = PwdService.checkPassword(
-          dto.password,
-          user.password
-        );
-        if (!passwordMatch) {
-          throw new BadRequestException("Password is incorrect");
-        } else {
-          const token = JWTService.signToken({
-            id: user.id,
-            email: user.email,
-            username: user.username,
-          });
-          return Response.send(res, 201, true, "User LoggedIn successfully", {
-            user: {
-              id: user.id,
-              email: user.email,
-              username: user.username,
-            },
-            token,
-          });
-        }
+        // For security don't reveal whether user or password failed
+        throw new UnauthorizedException('Invalid credentials')
       }
+
+      const passwordMatch = PwdService.checkPassword(
+        dto.password,
+        user.password
+      );
+      if (!passwordMatch) {
+        throw new UnauthorizedException('Invalid credentials')
+      }
+
+      const token = JWTService.signToken({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      });
+      return Response.send(res, 200, true, 'Login successful', {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+        },
+        token,
+      });
     } catch (error) {
       next(error);
     }
