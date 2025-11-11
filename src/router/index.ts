@@ -2,14 +2,8 @@ import { Router } from "express";
 import { authenticate } from "../middleware/authHandler";
 import ErrorHandler from "../middleware/errorHandler";
 import AuthRouter from "./auth.router";
-import DriverRoute from "./driver.router";
-import BusesRoute from "./buses.router";
-import BusStopRoute from "./busStop.router";
-import WeeklyTimetable from "./weeklyTimetable.router";
-import ManagerRoute from "./manager.route";
-import SubManagerRoute from "./subManager.route";
-import DailyRoute from "./dailyActivity";
-import ZoneRoute from "./zone.router";
+import ProductRouter from "./product.router";
+import OrderRouter from "./order.router";
 import isManager from "../middleware/isManager";
 import isSubManager from "../middleware/isSubManager";
 import AdminRouter from "./admin.router";
@@ -22,6 +16,8 @@ router.get('/', (req, res) => {
 })
 
 router.use("/auth", AuthRouter);
+router.use("/products", ProductRouter);
+router.use("/orders", OrderRouter);
 // router.use("/driver", [authenticate], ErrorHandler.watch(DriverRoute));
 // router.use("/buses", authenticate, ErrorHandler.watch(BusesRoute));
 // router.use("/busStop", authenticate, ErrorHandler.watch(BusStopRoute));

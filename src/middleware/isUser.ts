@@ -6,7 +6,7 @@ interface AuthenticatedRequest extends Request {
   user?: { role: string };
 }
 
-export default function isAdmin(
+export default function isUser(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -14,8 +14,9 @@ export default function isAdmin(
   if (!req.user) {
     return ResponseService.send(res, 401, false, "Unauthorized");
   }
-  if (req.user.role !== "Admin") {
-    return ResponseService.send(res, 403, false, "Forbidden: Admins only");
+  if (req.user.role !== "User") {
+    return ResponseService.send(res, 403, false, "Forbidden: Users only");
   }
   next();
 }
+

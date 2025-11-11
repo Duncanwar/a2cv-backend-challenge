@@ -25,6 +25,7 @@ export const authenticate = (
     } else {
       console.log(isValid);
       req.user = isValid;
+      console.log(req.user.id);
       next();
     }
   } catch (err) {
