@@ -7,6 +7,8 @@ import Response from "../../services/response";
 import { BadRequestException, NotFoundException } from "../../utils/exception";
 import { LoginDTO, AuthSignUpDTO } from "./dto";
 import { UnauthorizedException } from '../../utils/exception'
+import GenericService from "../../services/Generic";
+import { ERole } from "../../generated/prisma";
 
 export default class AuthController {
   static async signUp(
@@ -36,7 +38,8 @@ export default class AuthController {
       // Email and username uniqueness already checked by validator
       AuthData.password = PwdService.hashPassword(AuthData.password)
       // Ensure role is of type ERole if present
-      const user = await prisma.user.create({
+      const userService =  new GenericService('user')
+      const user = await userService.create({
         data: {
           ...AuthData,
           role: AuthData.role as any, // Replace 'any' with 'ERole' if you have imported it
