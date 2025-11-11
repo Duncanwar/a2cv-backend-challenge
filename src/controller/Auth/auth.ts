@@ -7,7 +7,7 @@ import Response from "../../services/response";
 import { BadRequestException, NotFoundException } from "../../utils/exception";
 import { LoginDTO, AuthSignUpDTO } from "./dto";
 import { UnauthorizedException } from '../../utils/exception'
-import GenericService from "../../services/Generic";
+import GenericService from "../../services/generic";
 import { ERole } from "../../generated/prisma";
 
 export default class AuthController {

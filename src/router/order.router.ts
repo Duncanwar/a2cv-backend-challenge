@@ -1,5 +1,5 @@
 import { Router } from "express";
-import OrderController, { createOrderValidators } from "../controller/Order/order";
+import OrderController, { createOrderValidators } from "../controller/order/order";
 import { authenticate } from "../middleware/authHandler";
 import isUser from "../middleware/isUser";
 import { validateRequest } from "../middleware/validateRequest";

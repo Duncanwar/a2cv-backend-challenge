@@ -3,7 +3,7 @@ import { prisma } from "../../config/database";
 import ResponseService from "../../services/response";
 import { body } from "express-validator";
 import { requireAuth, sendUnauthorized } from "../../utils/helpers";
-import GenericService from "../../services/Generic";
+import GenericService from "../../services/generic";
 
 export const createOrderValidators = [
   body("items")

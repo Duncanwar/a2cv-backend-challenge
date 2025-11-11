@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import ResponseService from "../../services/response";
 import { body } from "express-validator";
 import { requireAuth, sendUnauthorized, sendNotFound, parsePaginationParams } from "../../utils/helpers";
-import GenericService from "../../services/Generic";
+import GenericService from "../../services/generic";
 
 // Extend Express Request interface to include user property
 declare global {
