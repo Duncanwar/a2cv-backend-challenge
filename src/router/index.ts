@@ -4,10 +4,7 @@ import ErrorHandler from "../middleware/errorHandler";
 import AuthRouter from "./auth.router";
 import ProductRouter from "./product.router";
 import OrderRouter from "./order.router";
-import isManager from "../middleware/isManager";
-import isSubManager from "../middleware/isSubManager";
-import AdminRouter from "./admin.router";
-import isAdmin from "../middleware/isAdmin";
+
 
 const router: Router = Router();
 

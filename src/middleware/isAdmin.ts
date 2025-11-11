@@ -3,7 +3,10 @@ import { Request, Response, NextFunction } from "express";
 import ResponseService from "../services/response";
 
 interface AuthenticatedRequest extends Request {
-  user?: { role: string };
+  user?: {
+    id: string;
+    role?: string;
+  };
 }
 
 export default function isAdmin(

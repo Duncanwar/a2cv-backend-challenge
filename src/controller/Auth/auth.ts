@@ -5,7 +5,7 @@ import PwdService from "../../services/bcrypt";
 import JWTService from "../../services/jwt";
 import Response from "../../services/response";
 import { BadRequestException, NotFoundException } from "../../utils/exception";
-import { LoginDTO, AuthSingUpDTO } from "./dto";
+import { LoginDTO, AuthSignUpDTO } from "./dto";
 import { UnauthorizedException } from '../../utils/exception'
 
 export default class AuthController {
@@ -28,16 +28,18 @@ export default class AuthController {
         )
       }
 
-      const AuthData: AuthSingUpDTO = req.body
+      const AuthData: AuthSignUpDTO = req.body
       if (!AuthData) {
         return Response.send(res, 400, false, 'Missing registration data')
       }
 
       // Email and username uniqueness already checked by validator
       AuthData.password = PwdService.hashPassword(AuthData.password)
+      // Ensure role is of type ERole if present
       const user = await prisma.user.create({
         data: {
           ...AuthData,
+          role: AuthData.role as any, // Replace 'any' with 'ERole' if you have imported it
         },
       })
 
@@ -96,6 +98,7 @@ export default class AuthController {
         id: user.id,
         email: user.email,
         username: user.username,
+        role: user.role,
       });
       return Response.send(res, 200, true, 'Login successful', {
         user: {
