@@ -1,6 +1,5 @@
-import { PrismaClient, Prisma } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '../config/database'
+import { PrismaClient } from '../generated/prisma'
 
 export default class GenericService<T extends keyof PrismaClient> {
   private model: any
@@ -13,8 +12,11 @@ export default class GenericService<T extends keyof PrismaClient> {
     return this.model.create({ data })
   }
 
-  async findUnique(where: any, select?: any) {
-    return this.model.findUnique({ where, select })
+  async findUnique(where: any, options?: { select?: any; include?: any }) {
+    const query: any = { where };
+    if (options?.select) query.select = options.select;
+    if (options?.include) query.include = options.include;
+    return this.model.findUnique(query);
   }
 
   async findMany(args: any = {}) {

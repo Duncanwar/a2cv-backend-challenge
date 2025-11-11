@@ -5,6 +5,7 @@ import ProductController, {
 } from "../controller/product/product";
 import { authenticate } from "../middleware/authHandler";
 import isAdmin from "../middleware/isAdmin";
+import { validateRequest } from "../middleware/validateRequest";
 
 const router: Router = Router();
 
@@ -13,22 +14,18 @@ router.get("/", ProductController.getProducts);
 router.get("/:id", ProductController.getProductById);
 
 // Admin-only endpoints
-router.post("/", [
-  authenticate,
-  isAdmin,
-  ...createProductValidators
-], ProductController.createProduct);
+router.post(
+  "/",
+  [authenticate, isAdmin, ...createProductValidators, validateRequest],
+  ProductController.createProduct
+);
 
 router.put(
   "/:id",
-  [authenticate, isAdmin, ...updateProductValidators],
+  [authenticate, isAdmin, ...updateProductValidators, validateRequest],
   ProductController.updateProduct
 );
 
-router.delete(
-  "/:id",
-  [authenticate, isAdmin],
-  ProductController.deleteProduct
-);
+router.delete("/:id", [authenticate, isAdmin], ProductController.deleteProduct);
 
 export default router;

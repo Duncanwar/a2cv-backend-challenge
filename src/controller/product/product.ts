@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import { validationResult } from "express-validator";
-import { prisma } from "../../config/database";
 import ResponseService from "../../services/response";
 import { body } from "express-validator";
+import { requireAuth, sendUnauthorized, sendNotFound, parsePaginationParams } from "../../utils/helpers";
+import GenericService from "../../services/Generic";
 
 // Extend Express Request interface to include user property
 declare global {
@@ -67,45 +67,26 @@ export const updateProductValidators = [
 ];
 
 export default class ProductController {
+  private static productService = new GenericService("product");
+
   static async createProduct(
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<Response | void> {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return ResponseService.send(
-          res,
-          400,
-          false,
-          "Validation failed",
-          null,
-          errors.array().map((e) => e.msg)
-        );
-      }
+      const user = requireAuth(req);
+      if (!user) return sendUnauthorized(res);
 
       const { name, description, price, stock, category } = req.body;
-console.log(req.body);
-      if (!req.user || !req.user.id) {
-        return ResponseService.send(
-          res,
-          401,
-          false,
-          "Unauthorized: User information is missing",
-          null
-        );
-      }
 
-      const product = await prisma.product.create({
-        data: {
-          name,
-          description,
-          price: Number(price),
-          stock: Number(stock),
-          category,
-          userId: req.user.id, // assuming req.user is set by auth middleware
-        },
+      const product = await this.productService.create({
+        name,
+        description,
+        price: Number(price),
+        stock: Number(stock),
+        category,
+        userId: user.id,
       });
 
       return ResponseService.send(res, 201, true, "Product created", product);
@@ -120,40 +101,18 @@ console.log(req.body);
     next: NextFunction
   ): Promise<Response | void> {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return ResponseService.send(
-          res,
-          400,
-          false,
-          "Validation failed",
-          null,
-          errors.array().map((e) => e.msg)
-        );
-      }
-
       const { id } = req.params;
       const { name, description, price, stock } = req.body;
 
-      const dataToUpdate: {
-        name?: string;
-        description?: string;
-        price?: number;
-        stock?: number;
-      } = {};
+      const existingProduct = await this.productService.findUnique({ id });
 
-      if (name !== undefined) {
-        dataToUpdate.name = name;
-      }
-      if (description !== undefined) {
-        dataToUpdate.description = description;
-      }
-      if (price !== undefined) {
-        dataToUpdate.price = Number(price);
-      }
-      if (stock !== undefined) {
-        dataToUpdate.stock = Number(stock);
-      }
+      if (!existingProduct) return sendNotFound(res, "Product");
+
+      const dataToUpdate: Record<string, any> = {};
+      if (name !== undefined) dataToUpdate.name = name;
+      if (description !== undefined) dataToUpdate.description = description;
+      if (price !== undefined) dataToUpdate.price = Number(price);
+      if (stock !== undefined) dataToUpdate.stock = Number(stock);
 
       if (Object.keys(dataToUpdate).length === 0) {
         return ResponseService.send(
@@ -165,24 +124,10 @@ console.log(req.body);
         );
       }
 
-      const existingProduct = await prisma.product.findUnique({
-        where: { id },
-      });
-
-      if (!existingProduct) {
-        return ResponseService.send(
-          res,
-          404,
-          false,
-          "Product not found",
-          null
-        );
-      }
-
-      const updatedProduct = await prisma.product.update({
-        where: { id },
-        data: dataToUpdate,
-      });
+      const updatedProduct = await this.productService.update(
+        { id },
+        dataToUpdate
+      );
 
       return ResponseService.send(
         res,
@@ -202,13 +147,8 @@ console.log(req.body);
     next: NextFunction
   ): Promise<Response | void> {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || parseInt(req.query.pageSize as string) || 10;
+      const { pageNumber, pageSize, skip } = parsePaginationParams(req.query);
       const search = (req.query.search as string) || "";
-
-      const pageNumber = Math.max(1, page);
-      const pageSize = Math.max(1, limit);
-      const skip = (pageNumber - 1) * pageSize;
 
       const whereClause = search
         ? {
@@ -220,7 +160,7 @@ console.log(req.body);
         : {};
 
       const [products, totalProducts] = await Promise.all([
-        prisma.product.findMany({
+        this.productService.findMany({
           where: whereClause,
           select: {
             id: true,
@@ -232,17 +172,13 @@ console.log(req.body);
           skip,
           take: pageSize,
         }),
-        prisma.product.count({
-          where: whereClause,
-        }),
+        this.productService.count(whereClause),
       ]);
-
-      const totalPages = Math.ceil(totalProducts / pageSize);
 
       return ResponseService.send(res, 200, true, "Products retrieved", {
         currentPage: pageNumber,
         pageSize,
-        totalPages,
+        totalPages: Math.ceil(totalProducts / pageSize),
         totalProducts,
         products,
       });
@@ -258,20 +194,9 @@ console.log(req.body);
   ): Promise<Response | void> {
     try {
       const { id } = req.params;
+      const product = await this.productService.findUnique({ id });
 
-      const product = await prisma.product.findUnique({
-        where: { id },
-      });
-
-      if (!product) {
-        return ResponseService.send(
-          res,
-          404,
-          false,
-          "Product not found",
-          null
-        );
-      }
+      if (!product) return sendNotFound(res, "Product");
 
       return ResponseService.send(res, 200, true, "Product retrieved", product);
     } catch (error) {
@@ -286,24 +211,11 @@ console.log(req.body);
   ): Promise<Response | void> {
     try {
       const { id } = req.params;
+      const existingProduct = await this.productService.findUnique({ id });
 
-      const existingProduct = await prisma.product.findUnique({
-        where: { id },
-      });
+      if (!existingProduct) return sendNotFound(res, "Product");
 
-      if (!existingProduct) {
-        return ResponseService.send(
-          res,
-          404,
-          false,
-          "Product not found",
-          null
-        );
-      }
-
-      await prisma.product.delete({
-        where: { id },
-      });
+      await this.productService.delete({ id });
 
       return ResponseService.send(
         res,
