@@ -18,9 +18,7 @@ export const createOrderValidators = [
 ];
 
 export default class OrderController {
-  private static productService = new GenericService("product");
   private static orderService = new GenericService("order");
-  private static productOrderService = new GenericService("productOrder");
 
   static async createOrder(
     req: Request,
@@ -149,7 +147,7 @@ export default class OrderController {
       const user = requireAuth(req);
       if (!user) return sendUnauthorized(res);
 
-      const orders = await this.orderService.findMany({
+      const orders = await OrderController.orderService.findMany({
         where: { userId: user.id },
         select: {
           id: true,
