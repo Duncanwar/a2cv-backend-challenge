@@ -119,10 +119,10 @@ The server will start on `http://localhost:5000` (or the port specified in your 
 
 ## API Endpoints
 
-The API is served under the `/api` prefix. Here's an overview of available endpoints:
+The API is served under the `/api` prefix. A quick overview:
 
 ### Authentication (`/api/auth`)
-- `POST /api/auth/signup` - Register a new user
+- `POST /api/auth/register` - Register a new user
 - `POST /api/auth/login` - Login and receive JWT token
 
 ### Products (`/api/products`)
@@ -136,12 +136,254 @@ The API is served under the `/api` prefix. Here's an overview of available endpo
 - `POST /api/orders` - Place a new order (User role only)
 - `GET /api/orders` - Get user's order history (Authenticated users)
 
-### Query Parameters
+## API Documentation
 
-**Products List** (`GET /api/products`):
-- `page` - Page number (default: 1)
-- `limit` or `pageSize` - Items per page (default: 10)
-- `search` - Search term for product name (case-insensitive, partial match)
+### Base URL
+
+```
+http://localhost:5000/api
+```
+
+Interactive documentation is available at:
+
+- Swagger UI: `http://localhost:5000/api-docs`
+- JSON spec: `http://localhost:5000/api-docs.json`
+
+All responses follow this shape:
+
+```json
+{
+  "success": true,
+  "message": "Human readable text",
+  "object": {},
+  "errors": null
+}
+```
+
+Paginated responses wrap data inside `object`:
+
+```json
+{
+  "success": true,
+  "message": "Products retrieved",
+  "object": {
+    "currentPage": 1,
+    "pageSize": 10,
+    "totalPages": 3,
+    "totalProducts": 25,
+    "products": []
+  },
+  "errors": null
+}
+```
+
+### Authentication
+
+#### `POST /auth/register`
+- **Description**: Create a new user account
+- **Auth**: Public
+- **Body**:
+  ```json
+  {
+    "username": "john_doe",
+    "email": "john@example.com",
+    "password": "P@ssw0rd!"
+  }
+  ```
+- **Responses**:
+  - `201 Created`
+    ```json
+    {
+      "success": true,
+      "message": "User created successfully",
+      "object": {
+        "user": {
+          "id": "uuid",
+          "email": "john@example.com",
+          "username": "john_doe"
+        }
+      },
+      "errors": null
+    }
+    ```
+  - `400 Bad Request` on validation failure
+
+#### `POST /auth/login`
+- **Description**: Authenticate user and return JWT
+- **Auth**: Public
+- **Body**:
+  ```json
+  {
+    "email": "john@example.com",
+    "password": "P@ssw0rd!"
+  }
+  ```
+- **Responses**:
+  - `200 OK`
+    ```json
+    {
+      "success": true,
+      "message": "Login successful",
+      "object": {
+        "user": {
+          "id": "uuid",
+          "email": "john@example.com",
+          "username": "john_doe"
+        },
+        "token": "jwt-token"
+      },
+      "errors": null
+    }
+    ```
+  - `400 Bad Request` for invalid payload
+  - `401 Unauthorized` for invalid credentials
+
+### Products
+
+#### `GET /products`
+- **Description**: List products with pagination and optional search
+- **Auth**: Public
+- **Query Parameters**:
+  - `page` (number, default `1`)
+  - `limit` or `pageSize` (number, default `10`)
+  - `search` (string, optional, case-insensitive)
+- **Responses**:
+  - `200 OK` with paginated structure shown above
+
+#### `GET /products/:id`
+- **Description**: Retrieve product details
+- **Auth**: Public
+- **Responses**:
+  - `200 OK`
+    ```json
+    {
+      "success": true,
+      "message": "Product retrieved",
+      "object": {
+        "id": "uuid",
+        "name": "Sample Product",
+        "description": "Long text...",
+        "price": 1999,
+        "stock": 10,
+        "category": "Electronics",
+        "userId": "uuid",
+        "createdAt": "2025-11-10T10:00:00.000Z",
+        "updatedAt": "2025-11-10T10:00:00.000Z"
+      },
+      "errors": null
+    }
+    ```
+  - `404 Not Found` if product does not exist
+
+#### `POST /products`
+- **Description**: Create a new product
+- **Auth**: Bearer token, role `Admin`
+- **Headers**: `Authorization: Bearer <token>`
+- **Body**:
+  ```json
+  {
+    "name": "Sample Product",
+    "description": "Product description",
+    "price": 1999,
+    "stock": 20,
+    "category": "Electronics"
+  }
+  ```
+- **Responses**:
+  - `201 Created` with created product
+  - `400 Bad Request` on validation failure
+  - `401/403` on unauthorized access
+
+#### `PUT /products/:id`
+- **Description**: Update selected product fields
+- **Auth**: Bearer token, role `Admin`
+- **Body** (all fields optional, same validation as create):
+  ```json
+  {
+    "name": "Updated",
+    "description": "Updated description",
+    "price": 2499,
+    "stock": 15,
+    "category": "Accessories"
+  }
+  ```
+- **Responses**:
+  - `200 OK` with updated product
+  - `400 Bad Request`, `404 Not Found`, `401/403` as appropriate
+
+#### `DELETE /products/:id`
+- **Description**: Remove a product
+- **Auth**: Bearer token, role `Admin`
+- **Responses**:
+  - `200 OK` with success message
+  - `404 Not Found` if product does not exist
+
+### Orders
+
+#### `POST /orders`
+- **Description**: Place a new order
+- **Auth**: Bearer token, role `User`
+- **Body**:
+  ```json
+  [
+    { "productId": "uuid-a", "quantity": 2 },
+    { "productId": "uuid-b", "quantity": 1 }
+  ]
+  ```
+- **Responses**:
+  - `201 Created`
+    ```json
+    {
+      "success": true,
+      "message": "Order placed successfully",
+      "object": {
+        "id": "uuid",
+        "userId": "uuid",
+        "totalPrice": 4999,
+        "status": "pending",
+        "items": [
+          {
+            "id": "uuid",
+            "productId": "uuid-a",
+            "quantity": 2,
+            "price": 1999,
+            "product": {
+              "id": "uuid-a",
+              "name": "Sample Product",
+              "description": "Product description",
+              "category": "Electronics"
+            }
+          }
+        ]
+      },
+      "errors": null
+    }
+    ```
+  - `400 Bad Request` if stock is insufficient
+  - `404 Not Found` if any productId is invalid
+
+#### `GET /orders`
+- **Description**: Retrieve the authenticated user's order history
+- **Auth**: Bearer token (`User` or `Admin` role)
+- **Responses**:
+  - `200 OK`
+    ```json
+    {
+      "success": true,
+      "message": "Orders retrieved",
+      "object": [
+        {
+          "id": "uuid",
+          "status": "pending",
+          "totalPrice": 4999,
+          "createdAt": "2025-11-10T10:00:00.000Z"
+        }
+      ],
+      "errors": null
+    }
+    ```
+  - `200 OK` with empty array when no orders exist
+  - `401 Unauthorized` if token missing or invalid
 
 ## Technology Choices
 

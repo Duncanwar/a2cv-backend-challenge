@@ -38,12 +38,10 @@ export default class AuthController {
       // Email and username uniqueness already checked by validator
       AuthData.password = PwdService.hashPassword(AuthData.password)
       // Ensure role is of type ERole if present
-      const userService =  new GenericService('user')
+      const userService = new GenericService('user')
       const user = await userService.create({
-        data: {
-          ...AuthData,
-          role: AuthData.role as any, // Replace 'any' with 'ERole' if you have imported it
-        },
+        ...AuthData,
+        role: AuthData.role || ERole.User,
       })
 
       // Do not return password

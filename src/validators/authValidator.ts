@@ -1,7 +1,5 @@
 import { body } from 'express-validator'
-import { PrismaClient } from '../generated/prisma'
-
-const prisma = new PrismaClient()
+import { prisma } from '../config/database'
 
 export const registerValidators = [
   body('email')

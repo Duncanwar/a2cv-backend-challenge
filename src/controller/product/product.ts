@@ -3,6 +3,7 @@ import ResponseService from "../../services/response";
 import { body } from "express-validator";
 import { requireAuth, sendUnauthorized, sendNotFound, parsePaginationParams } from "../../utils/helpers";
 import GenericService from "../../services/generic";
+import redis from '../../config/redis'
 
 // Extend Express Request interface to include user property
 declare global {
@@ -64,6 +65,10 @@ export const updateProductValidators = [
     .optional()
     .isInt({ min: 0 })
     .withMessage("Stock must be a non-negative integer"),
+  body("category")
+    .optional()
+    .isString()
+    .withMessage("Category must be a string"),
 ];
 
 export default class ProductController {
@@ -102,7 +107,7 @@ export default class ProductController {
   ): Promise<Response | void> {
     try {
       const { id } = req.params;
-      const { name, description, price, stock } = req.body;
+      const { name, description, price, stock, category } = req.body;
 
       const existingProduct = await this.productService.findUnique({ id });
 
@@ -113,6 +118,7 @@ export default class ProductController {
       if (description !== undefined) dataToUpdate.description = description;
       if (price !== undefined) dataToUpdate.price = Number(price);
       if (stock !== undefined) dataToUpdate.stock = Number(stock);
+      if (category !== undefined) dataToUpdate.category = category;
 
       if (Object.keys(dataToUpdate).length === 0) {
         return ResponseService.send(
@@ -147,8 +153,19 @@ export default class ProductController {
     next: NextFunction
   ): Promise<Response | void> {
     try {
-      const { pageNumber, pageSize, skip } = parsePaginationParams(req.query);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || parseInt(req.query.pageSize as string) || 10;
       const search = (req.query.search as string) || "";
+
+      const cacheKey = `products:${page}:${limit}:${search}`;
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return ResponseService.send(res, 200, true, "Products retrieved (cached)", JSON.parse(cached));
+      }
+
+      const pageNumber = Math.max(1, page);
+      const pageSize = Math.max(1, limit);
+      const skip = (pageNumber - 1) * pageSize;
 
       const whereClause = search
         ? {
@@ -175,13 +192,19 @@ export default class ProductController {
         this.productService.count(whereClause),
       ]);
 
-      return ResponseService.send(res, 200, true, "Products retrieved", {
+      const totalPages = Math.ceil(totalProducts / pageSize);
+
+      const responseData = {
         currentPage: pageNumber,
         pageSize,
-        totalPages: Math.ceil(totalProducts / pageSize),
+        totalPages,
         totalProducts,
         products,
-      });
+      };
+
+      await redis.set(cacheKey, JSON.stringify(responseData), 'EX', 60); // cache for 60 seconds
+
+      return ResponseService.send(res, 200, true, "Products retrieved", responseData);
     } catch (error) {
       next(error);
     }

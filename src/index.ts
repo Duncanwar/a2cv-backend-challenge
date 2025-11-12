@@ -1,9 +1,11 @@
 import express from 'express'
+import swaggerUi from 'swagger-ui-express'
 import { configureMiddleware } from './config/app'
 import { connectDatabase, disconnectDatabase } from './config/database'
 import env from './config/env'
 import ErrorHandler from './middleware/errorHandler'
 import routes from './router'
+import swaggerSpec from './config/swagger'
 
 const app = express()
 
@@ -12,6 +14,11 @@ const PORT: number | string = env.PORT
 app.enable('trust proxy')
 
 configureMiddleware(app)
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+app.get('/api-docs.json', (_req, res) => {
+  res.json(swaggerSpec)
+})
 
 app.use('/api', routes)
 
@@ -29,7 +36,9 @@ const startServer = async (): Promise<void> => {
   }
 }
 
-startServer().catch(console.error)
+if (process.env.NODE_ENV !== 'test') {
+  startServer().catch(console.error)
+}
 
 process.on('SIGINT', async () => {
   try {
